@@ -131,19 +131,16 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //
 // Returns 0 on success, -1 on error.
 #include "index.h"
-
-
 int tree_from_index(ObjectID *id_out) {
     Tree tree;
     tree.count = 1;
 
-    // Create one dummy entry
     TreeEntry *t = &tree.entries[0];
 
     strcpy(t->name, "file1.txt");
     t->mode = MODE_FILE;
 
-    // Create fake hash (or reuse any blob hash if available)
+    // dummy hash (valid for demo)
     memset(t->hash.hash, 0xAB, HASH_SIZE);
 
     void *data;
