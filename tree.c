@@ -130,7 +130,7 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 //
 // Returns 0 on success, -1 on error.
 #include "index.h"
-#include "object.h"
+
 
 int tree_from_index(ObjectID *id_out) {
     Index idx;
