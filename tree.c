@@ -153,7 +153,7 @@ int tree_from_index(ObjectID *id_out) {
         t->mode = MODE_FILE;
 
         // Copy hash
-        t->hash = entry->id;
+        t->hash = entry->hash;
     }
 
     // Serialize tree
