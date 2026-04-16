@@ -112,7 +112,9 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     // Convert hash to hex
     char hex[HASH_HEX_SIZE + 1];
     hash_to_hex(id_out, hex);
-
+    // Ensure base directories exist
+    mkdir(".pes", 0755);
+    mkdir(OBJECTS_DIR, 0755);
     // Create directory path
     char dir[512];
     snprintf(dir, sizeof(dir), "%s/%.2s", OBJECTS_DIR, hex);
