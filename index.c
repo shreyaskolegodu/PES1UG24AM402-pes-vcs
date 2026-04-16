@@ -24,7 +24,7 @@
 #include <unistd.h>
 #include <dirent.h>
 #include "pes.h"
-
+#include <sys/stat.h>
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 // Find an index entry by path (linear scan).
@@ -145,12 +145,14 @@ int index_load(Index *index) {
 
     index->count = 0;
 
-    while (!feof(f)) {
+    char line[1024];
+
+    while (fgets(line, sizeof(line), f)) {
         IndexEntry *e = &index->entries[index->count];
 
         char hex[HASH_HEX_SIZE + 1];
 
-        if (fscanf(f, "%o %64s %lu %u %[^\n]\n",
+        if (sscanf(line, "%o %64s %lu %u %511[^\n]",
                    &e->mode,
                    hex,
                    &e->mtime_sec,
@@ -222,16 +224,26 @@ int index_add(Index *index, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
 
-  size_t size = ftell(f);
-  rewind(f);
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    rewind(f);
 
-  void *data = NULL;
+    void *data = NULL;
 
-  if (size > 0) {
-    data = malloc(size);
-    if (!data) return -1;
-    fread(data, 1, size, f);
-  }
+    if (size > 0) {
+        data = malloc(size);
+        if (!data) {
+            fclose(f);
+            return -1;
+        }
+
+        if (fread(data, 1, size, f) != size) {
+            free(data);
+            fclose(f);
+            return -1;
+        }
+    }
+
     fclose(f);
 
     ObjectID id;
@@ -239,14 +251,16 @@ int index_add(Index *index, const char *path) {
         free(data);
         return -1;
     }
+
     free(data);
 
     struct stat st;
-    stat(path, &st);
+    if (stat(path, &st) != 0) return -1;
 
     IndexEntry *e = index_find(index, path);
 
     if (!e) {
+        if (index->count >= MAX_INDEX_ENTRIES) return -1;
         e = &index->entries[index->count++];
     }
 
@@ -254,7 +268,9 @@ int index_add(Index *index, const char *path) {
     e->hash = id;
     e->mtime_sec = st.st_mtime;
     e->size = st.st_size;
-    strcpy(e->path, path);
+
+    strncpy(e->path, path, sizeof(e->path) - 1);
+    e->path[sizeof(e->path) - 1] = '\0';
 
     return index_save(index);
 }
