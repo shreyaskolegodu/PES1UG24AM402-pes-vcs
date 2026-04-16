@@ -155,6 +155,7 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 //
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
+
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
     char path[512];
     object_path(id, path, sizeof(path));
@@ -167,12 +168,28 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     rewind(fp);
 
     char *buffer = malloc(size);
-    fread(buffer, 1, size, fp);
+    if (fread(buffer, 1, size, fp) != size) {
+        fclose(fp);
+        free(buffer);
+        return -1;
+    }
     fclose(fp);
 
-    // Find header-data separator
+    // 🔍 Verify hash (CRITICAL FIX)
+    ObjectID computed;
+    compute_hash(buffer, size, &computed);
+
+    if (memcmp(computed.hash, id->hash, HASH_SIZE) != 0) {
+        free(buffer);
+        return -1;
+    }
+
+    // Find '\0'
     char *null_pos = memchr(buffer, '\0', size);
-    if (!null_pos) return -1;
+    if (!null_pos) {
+        free(buffer);
+        return -1;
+    }
 
     size_t header_len = null_pos - buffer + 1;
 
@@ -187,7 +204,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     // Parse size
     sscanf(buffer, "%*s %zu", len_out);
 
-    // Copy data
+    // Extract data
     *data_out = malloc(*len_out);
     memcpy(*data_out, buffer + header_len, *len_out);
 
