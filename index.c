@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
+#include "pes.h"
 
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
@@ -221,12 +222,16 @@ int index_add(Index *index, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
 
-    fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    rewind(f);
+  size_t size = ftell(f);
+  rewind(f);
 
-    void *data = malloc(size);
+  void *data = NULL;
+
+  if (size > 0) {
+    data = malloc(size);
+    if (!data) return -1;
     fread(data, 1, size, f);
+  }
     fclose(f);
 
     ObjectID id;
