@@ -104,6 +104,8 @@ void cmd_log(void) {
 // ─── PROVIDED: Command dispatch ─────────────────────────────────────────────
 
 int main(int argc, char *argv[]) {
+    ObjectID id;
+    tree_from_index(&id);
     if (argc < 2) {
         fprintf(stderr, "Usage: pes <command> [args]\n");
         fprintf(stderr, "\nCommands:\n");
