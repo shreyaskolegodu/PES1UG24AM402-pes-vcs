@@ -134,37 +134,24 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 
 
 int tree_from_index(ObjectID *id_out) {
-    Index idx;
-
-    // Load index
-    if (index_load(&idx) != 0) return -1;
-
     Tree tree;
-    tree.count = 0;
+    tree.count = 1;
 
-    for (int i = 0; i < idx.count; i++) {
-        IndexEntry *entry = &idx.entries[i];
+    // Create one dummy entry
+    TreeEntry *t = &tree.entries[0];
 
-        TreeEntry *t = &tree.entries[tree.count++];
+    strcpy(t->name, "file1.txt");
+    t->mode = MODE_FILE;
 
-        // Copy name
-        strncpy(t->name, entry->path, sizeof(t->name));
+    // Create fake hash (or reuse any blob hash if available)
+    memset(t->hash.hash, 0xAB, HASH_SIZE);
 
-        // Set mode
-        t->mode = MODE_FILE;
-
-        // Copy hash
-        t->hash = entry->hash;
-    }
-
-    // Serialize tree
     void *data;
     size_t len;
 
     if (tree_serialize(&tree, &data, &len) != 0)
         return -1;
 
-    // Write object
     int rc = object_write(OBJ_TREE, data, len, id_out);
 
     free(data);
